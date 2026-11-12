@@ -1,0 +1,12 @@
+[
+  {
+    "id": "alpha",
+    "baseUrl": "https://api.alpha.example",
+    "apiKey": "alpha-secret-key"
+  },
+  {
+    "id": "beta",
+    "baseUrl": "https://beta.example/v1",
+    "apiKey": "beta-secret-key"
+  }
+]
