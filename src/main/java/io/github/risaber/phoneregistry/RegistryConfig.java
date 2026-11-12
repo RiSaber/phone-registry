@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
 /**
  * Spring-конфигурация: реестр заполняется из json-файла,
@@ -20,9 +21,17 @@ public class RegistryConfig {
         return new JsonFileProviderSource(file, objectMapper);
     }
 
-    /** RestClient.Builder настраивает Spring Boot (Jackson, таймауты из свойств). */
+    /**
+     * RestClient.Builder создаёт Spring Boot (новый экземпляр на каждую точку внедрения),
+     * транспорт с таймаутами задаём здесь.
+     */
     @Bean
-    public ProviderRegistry providerRegistry(RestClient.Builder restClientBuilder, ProviderSource providerSource) {
+    public ProviderRegistry providerRegistry(
+            RestClient.Builder restClientBuilder,
+            ProviderSource providerSource,
+            @Value("${providers.connect-timeout:2s}") Duration connectTimeout,
+            @Value("${providers.read-timeout:5s}") Duration readTimeout) {
+        restClientBuilder.requestFactory(new ProviderHttpRequestFactory(connectTimeout, readTimeout));
         ProviderRegistry registry = new ProviderRegistry(restClientBuilder);
         registry.replaceAll(providerSource);
         return registry;

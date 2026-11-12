@@ -53,6 +53,8 @@ class ProviderRegistryTest {
 
         assertThatThrownBy(() -> registry.isAvailable("gamma", "77001234567"))
                 .isInstanceOf(UnknownProviderException.class);
+        assertThatThrownBy(() -> registry.isAvailable(null, "77001234567"))
+                .isInstanceOf(UnknownProviderException.class);
     }
 
     @Test

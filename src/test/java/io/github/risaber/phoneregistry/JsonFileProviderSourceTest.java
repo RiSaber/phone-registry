@@ -33,6 +33,27 @@ class JsonFileProviderSourceTest {
     }
 
     @Test
+    void unknownFieldsAreIgnored(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("providers.json");
+        Files.writeString(file, """
+                [{"id": "alpha", "baseUrl": "https://alpha.example", "apiKey": "k", "comment": "лишнее поле"}]
+                """);
+
+        assertThat(new JsonFileProviderSource(file, objectMapper).load())
+                .containsExactly(new Provider("alpha", "https://alpha.example", "k"));
+    }
+
+    @Test
+    void nullElementFailsWithFileName(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("providers.json");
+        Files.writeString(file, "[null]");
+
+        assertThatThrownBy(new JsonFileProviderSource(file, objectMapper)::load)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("providers.json");
+    }
+
+    @Test
     void missingFileFails(@TempDir Path dir) {
         var source = new JsonFileProviderSource(dir.resolve("absent.json"), objectMapper);
 

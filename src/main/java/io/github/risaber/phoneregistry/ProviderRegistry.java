@@ -53,7 +53,8 @@ public class ProviderRegistry {
     }
 
     public ProviderClient client(String providerId) {
-        ProviderClient client = clients.get(providerId);
+        // Map.copyOf не допускает get(null), поэтому null проверяем отдельно
+        ProviderClient client = providerId == null ? null : clients.get(providerId);
         if (client == null) {
             throw new UnknownProviderException(providerId);
         }

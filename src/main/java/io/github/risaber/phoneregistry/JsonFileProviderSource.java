@@ -34,7 +34,13 @@ public class JsonFileProviderSource implements ProviderSource {
     public List<Provider> load() {
         try (var in = Files.newInputStream(file)) {
             List<Provider> providers = objectMapper.readValue(in, PROVIDER_LIST);
-            return providers == null ? List.of() : List.copyOf(providers);
+            if (providers == null) {
+                return List.of();
+            }
+            if (providers.contains(null)) {
+                throw new IllegalArgumentException("Пустой элемент (null) в списке поставщиков: " + file);
+            }
+            return List.copyOf(providers);
         } catch (IOException e) {
             throw new UncheckedIOException("Не удалось прочитать поставщиков из " + file, e);
         }

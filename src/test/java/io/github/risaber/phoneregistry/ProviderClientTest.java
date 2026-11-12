@@ -2,6 +2,9 @@ package io.github.risaber.phoneregistry;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -91,5 +94,54 @@ class ProviderClientTest {
 
         assertThatThrownBy(() -> client.isAvailable("77001234567"))
                 .isInstanceOf(UnexpectedProviderResponseException.class);
+    }
+
+    @Test
+    void okBodyIsAcceptedWithAnyContentType() {
+        server.expect(requestTo(URL))
+                .andRespond(withSuccess("{\"status\":\"ok\"}", MediaType.TEXT_PLAIN));
+
+        assertThat(client.isAvailable("77001234567")).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not json", "[]", ""})
+    void okStatusWithMalformedBodyIsAnError(String body) {
+        server.expect(requestTo(URL)).andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.isAvailable("77001234567"))
+                .isInstanceOf(UnexpectedProviderResponseException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {201, 204, 302})
+    void statusOtherThan200Or404IsAnError(int status) {
+        server.expect(requestTo(URL))
+                .andRespond(withStatus(HttpStatus.valueOf(status))
+                        .body("{\"status\":\"ok\"}")
+                        .contentType(MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.isAvailable("77001234567"))
+                .isInstanceOf(UnexpectedProviderResponseException.class)
+                .hasMessageContaining(String.valueOf(status));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", ".", ".."})
+    void invalidPhoneIsRejectedWithoutRequest(String phone) {
+        assertThatThrownBy(() -> client.isAvailable(phone))
+                .isInstanceOf(IllegalArgumentException.class);
+        // Ни одного запроса к поставщику не ушло
+        server.verify();
+    }
+
+    @Test
+    void phoneIsEncodedAsSinglePathSegment() {
+        server.expect(requestTo("https://alpha.example/subscribers/%2B7700%2F123"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        assertThat(client.isAvailable("+7700/123")).isFalse();
+        server.verify();
     }
 }
